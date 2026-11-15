@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="ja" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>DRUM HABIT LOG</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', 'Noto Sans JP', sans-serif;
+      background-color: #0a0a0b;
+      color: #f4f4f5;
+      -webkit-tap-highlight-color: transparent;
+    }
+    /* Hide number input spin buttons for clean mobile UI */
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    input[type="number"] {
+      -moz-appearance: textfield;
+    }
+    /* Custom date input dark styling */
+    input[type="date"]::-webkit-calendar-picker-indicator {
+      filter: invert(0.85);
+      cursor: pointer;
+    }
+    .gold-glow {
+      box-shadow: 0 0 20px rgba(245, 158, 11, 0.15);
+    }
+  </style>
+</head>
+<body class="min-h-screen pb-24 antialiased selection:bg-amber-500/30 selection:text-amber-200">
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 pointer-events-none opacity-0 transition-all duration-300 transform -translate-y-3">
+    <div class="bg-zinc-900 border border-amber-500/50 text-amber-300 px-5 py-3 rounded-full shadow-2xl flex items-center gap-2.5 text-sm font-semibold tracking-wide">
+      <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+      <span id="toast-message">保存しました</span>
+    </div>
+  </div>
+
+  <!-- Main Container -->
+  <div class="max-w-md mx-auto px-4 pt-5 space-y-5">
+
+<!-- Header -->
+<header class="flex items-center justify-between border-b border-zinc-800/80 pb-3.5">
+  <div>
+    <div class="flex items-center gap-2">
+      <span class="inline-block w-2.5 h-2.5 rounded-sm bg-amber-500 rotate-45"></span>
+      <h1 class="text-lg font-extrabold tracking-wider text-zinc-100">DRUM HABIT LOG</h1>
+    </div>
+    <p class="text-[11px] text-zinc-400 mt-0.5 tracking-wide">THE HABITUAL DRUMMER ROUTINE</p>
+  </div>
+  <div id="streak-badge" class="bg-zinc-900 border border-zinc-800 px-3 py-1.5 rounded-xl text-right">
+    <span class="block text-[10px] text-zinc-500 uppercase font-semibold">Total Logs</span>
+    <span id="total-count" class="text-sm font-bold text-amber-400">0 日</span>
+  </div>
+</header>
+
+<!-- Date Selector Card (Midnight & Backfill Friendly) -->
+<section class="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-4 space-y-3">
+  <div class="flex items-center justify-between gap-2">
+    <div class="flex-1">
+      <label for="date-picker" class="block text-[11px] font-semibold text-zinc-400 mb-1">練習日（日付跨ぎ・振り返り対応）</label>
+      <div class="relative flex items-center">
+        <input type="date" id="date-picker" class="w-full bg-zinc-950 border border-zinc-700/80 rounded-xl px-3.5 py-2.5 text-base font-bold text-zinc-100 focus:outline-none focus:border-amber-500 transition-colors">
+      </div>
+    </div>
+    <div class="flex flex-col gap-1.5 pt-4">
+      <div class="flex gap-1.5">
+        <button type="button" id="btn-yesterday" class="px-3 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 active:scale-95 text-xs font-semibold text-zinc-300 border border-zinc-700/60 transition">
+          昨日
+        </button>
+        <button type="button" id="btn-today" class="px-3 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 active:scale-95 text-xs font-semibold text-amber-400 border border-amber-500/30 transition">
+          今日
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Day of Week & Daily Challenge Banner -->
+  <div class="bg-zinc-950/90 border border-amber-500/25 rounded-xl p-3 flex items-start gap-3">
+    <div id="day-badge" class="shrink-0 w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/40 flex flex-col items-center justify-center text-amber-400 font-extrabold text-sm">
+      月
+    </div>
+    <div class="min-w-0 flex-1">
+      <div class="flex items-center justify-between">
+        <span class="text-[10px] font-bold uppercase tracking-wider text-amber-500/90">本日のチャレンジ枠</span>
+        <span id="entry-status-badge" class="text-[10px] px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400 font-medium">新規入力</span>
+      </div>
+      <p id="daily-theme-title" class="text-xs font-bold text-zinc-100 mt-0.5 leading-snug">Rudimental Ritual 集中【前半】</p>
+      <p id="daily-theme-desc" class="text-[11px] text-zinc-400 mt-0.5 leading-tight">60 BPM (2・4拍取り) / Phase 1＆2 粒立ち・安定感</p>
+    </div>
+  </div>
+</section>
+
+<!-- ① Routine Checklist -->
+<section class="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-4 space-y-3">
+  <div class="flex items-center justify-between">
+    <h2 class="text-xs font-bold uppercase tracking-wider text-zinc-300 flex items-center gap-1.5">
+      <span class="text-amber-400">①</span> ルーティン完了チェック
+    </h2>
+    <button type="button" id="btn-check-all" class="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-amber-400 border border-zinc-700 active:scale-95 transition">
+      すべて完了にする
+    </button>
+  </div>
+
+  <div class="space-y-2" id="checklist-container">
+    <!-- Item 1 -->
+    <label class="routine-item flex items-center justify-between p-3 rounded-xl bg-zinc-950 border border-zinc-800/90 cursor-pointer select-none transition active:scale-[0.99]">
+      <div class="flex items-center gap-3">
+        <input type="checkbox" data-task="basics" class="task-checkbox peer sr-only">
+        <div class="w-6 h-6 rounded-lg border-2 border-zinc-600 peer-checked:border-amber-500 peer-checked:bg-amber-500 flex items-center justify-center transition">
+          <svg class="w-4 h-4 text-zinc-950 opacity-0 peer-checked:opacity-100 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <div>
+          <span class="block text-sm font-semibold text-zinc-100">基礎パート（約5分）</span>
+          <span class="block text-[11px] text-zinc-400">左足スタートツーバス ＆ ヒール＆トゥ確認</span>
+        </div>
+      </div>
+      <span class="text-[11px] font-mono text-zinc-500">22:00</span>
+    </label>
+
+    <!-- Item 2 -->
+    <label class="routine-item flex items-center justify-between p-3 rounded-xl bg-zinc-950 border border-zinc-800/90 cursor-pointer select-none transition active:scale-[0.99]">
+      <div class="flex items-center gap-3">
+        <input type="checkbox" data-task="ritual" class="task-checkbox peer sr-only">
+        <div class="w-6 h-6 rounded-lg border-2 border-zinc-600 peer-checked:border-amber-500 peer-checked:bg-amber-500 flex items-center justify-center transition">
+          <svg class="w-4 h-4 text-zinc-950 opacity-0 peer-checked:opacity-100 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <div>
+          <span class="block text-sm font-semibold text-zinc-100">Drumset Ritual（約5〜10分）</span>
+          <span class="block text-[11px] text-zinc-400">ウォームアップ 1〜2周通し</span>
+        </div>
+      </div>
+      <span class="text-[11px] font-mono text-zinc-500">22:05</span>
+    </label>
+
+    <!-- Item 3 -->
+    <label class="routine-item flex items-center justify-between p-3 rounded-xl bg-zinc-950 border border-zinc-800/90 cursor-pointer select-none transition active:scale-[0.99]">
+      <div class="flex items-center gap-3">
+        <input type="checkbox" data-task="brush" class="task-checkbox peer sr-only">
+        <div class="w-6 h-6 rounded-lg border-2 border-zinc-600 peer-checked:border-amber-500 peer-checked:bg-amber-500 flex items-center justify-center transition">
+          <svg class="w-4 h-4 text-zinc-950 opacity-0 peer-checked:opacity-100 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <div>
+          <span class="block text-sm font-semibold text-zinc-100">ブラシ練習（約25分）</span>
+          <span class="block text-[11px] text-zinc-400">YouTube動画(0.8倍速) ＋ 手描き譜面</span>
+        </div>
+      </div>
+      <span class="text-[11px] font-mono text-zinc-500">22:15</span>
+    </label>
+
+    <!-- Item 4 -->
+    <label class="routine-item flex items-center justify-between p-3 rounded-xl bg-zinc-950 border border-zinc-800/90 cursor-pointer select-none transition active:scale-[0.99]">
+      <div class="flex items-center gap-3">
+        <input type="checkbox" data-task="challenge" class="task-checkbox peer sr-only">
+        <div class="w-6 h-6 rounded-lg border-2 border-zinc-600 peer-checked:border-amber-500 peer-checked:bg-amber-500 flex items-center justify-center transition">
+          <svg class="w-4 h-4 text-zinc-950 opacity-0 peer-checked:opacity-100 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <div>
+          <span class="block text-sm font-semibold text-zinc-100">日替わりチャレンジ（約15分）</span>
+          <span id="checklist-challenge-sub" class="block text-[11px] text-amber-400/90">Rudimental Ritual 集中【前半】</span>
+        </div>
+      </div>
+      <span class="text-[11px] font-mono text-zinc-500">22:40</span>
+    </label>
+  </div>
+</section>
+
+<!-- ② Achieved BPM Inputs -->
+<section class="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-4 space-y-3.5">
+  <h2 class="text-xs font-bold uppercase tracking-wider text-zinc-300 flex items-center gap-1.5">
+    <span class="text-amber-400">②</span> 達成BPM・テンポ記録（数値）
+  </h2>
+
+  <!-- BPM 1: Drumset Ritual -->
+  <div class="bg-zinc-950 border border-zinc-800/90 rounded-xl p-3">
+    <div class="flex items-center justify-between mb-2">
+      <div>
+        <label for="bpm-ritual" class="text-xs font-bold text-zinc-200">Drumset Ritual</label>
+        <span id="hint-ritual" class="block text-[10px] text-zinc-500">前回値: なし</span>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <button type="button" data-target="bpm-ritual" data-step="-1" class="bpm-step w-10 h-10 rounded-xl bg-zinc-800 hover:bg-zinc-700 active:scale-95 text-zinc-200 font-bold text-lg border border-zinc-700 flex items-center justify-center">-</button>
+        <input type="number" id="bpm-ritual" inputmode="numeric" placeholder="---" class="w-20 h-10 bg-zinc-900 border border-zinc-700 rounded-xl text-center text-lg font-extrabold text-amber-400 focus:outline-none focus:border-amber-500">
+        <button type="button" data-target="bpm-ritual" data-step="1" class="bpm-step w-10 h-10 rounded-xl bg-zinc-800 hover:bg-zinc-700 active:scale-95 text-zinc-200 font-bold text-lg border border-zinc-700 flex items-center justify-center">+</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BPM 2: Heel-Toe / One -->
+  <div class="bg-zinc-950 border border-zinc-800/90 rounded-xl p-3">
+    <div class="flex items-center justify-between mb-2">
+      <div>
+        <label for="bpm-heeltoe" class="text-xs font-bold text-zinc-200">ヒール＆トゥ / 『One』</label>
+        <span id="hint-heeltoe" class="block text-[10px] text-zinc-500">RF RF LF LF RF RF + Snare</span>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <button type="button" data-target="bpm-heeltoe" data-step="-1" class="bpm-step w-10 h-10 rounded-xl bg-zinc-800 hover:bg-zinc-700 active:scale-95 text-zinc-200 font-bold text-lg border border-zinc-700 flex items-center justify-center">-</button>
+        <input type="number" id="bpm-heeltoe" inputmode="numeric" placeholder="---" class="w-20 h-10 bg-zinc-900 border border-zinc-700 rounded-xl text-center text-lg font-extrabold text-amber-400 focus:outline-none focus:border-amber-500">
+        <button type="button" data-target="bpm-heeltoe" data-step="1" class="bpm-step w-10 h-10 rounded-xl bg-zinc-800 hover:bg-zinc-700 active:scale-95 text-zinc-200 font-bold text-lg border border-zinc-700 flex items-center justify-center">+</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BPM 3: Brush / Song Practice -->
+  <div class="bg-zinc-950 border border-zinc-800/90 rounded-xl p-3">
+    <div class="flex items-center justify-between">
+      <div>
+        <label for="bpm-brush" class="text-xs font-bold text-zinc-200">ブラシ / 課題曲 BPM</label>
+        <span id="hint-brush" class="block text-[10px] text-zinc-500">0.8倍速換算や原曲テンポなど（任意）</span>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <button type="button" data-target="bpm-brush" data-step="-2" class="bpm-step w-10 h-10 rounded-xl bg-zinc-800 hover:bg-zinc-700 active:scale-95 text-zinc-200 font-bold text-base border border-zinc-700 flex items-center justify-center">-2</button>
+        <input type="number" id="bpm-brush" inputmode="numeric" placeholder="---" class="w-20 h-10 bg-zinc-900 border border-zinc-700 rounded-xl text-center text-lg font-extrabold text-zinc-100 focus:outline-none focus:border-amber-500">
+        <button type="button" data-target="bpm-brush" data-step="2" class="bpm-step w-10 h-10 rounded-xl bg-zinc-800 hover:bg-zinc-700 active:scale-95 text-zinc-200 font-bold text-base border border-zinc-700 flex items-center justify-center">+2</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ③ 3-Level Feeling / Rating -->
+<section class="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-4 space-y-3">
+  <h2 class="text-xs font-bold uppercase tracking-wider text-zinc-300 flex items-center gap-1.5">
+    <span class="text-amber-400">③</span> 手応え・コンディション（3段階）
+  </h2>
+  <div class="grid grid-cols-3 gap-2" id="rating-group">
+    <button type="button" data-rating="◎" class="rating-btn py-3 px-2 rounded-xl bg-zinc-950 border border-zinc-800 text-center transition active:scale-95">
+      <span class="block text-xl font-extrabold mb-0.5">◎</span>
+      <span class="block text-[11px] font-semibold text-zinc-400">絶好調・掴めた</span>
+    </button>
+    <button type="button" data-rating="◯" class="rating-btn py-3 px-2 rounded-xl bg-zinc-950 border border-zinc-800 text-center transition active:scale-95">
+      <span class="block text-xl font-extrabold mb-0.5">◯</span>
+      <span class="block text-[11px] font-semibold text-zinc-400">普通・順調</span>
+    </button>
+    <button type="button" data-rating="△" class="rating-btn py-3 px-2 rounded-xl bg-zinc-950 border border-zinc-800 text-center transition active:scale-95">
+      <span class="block text-xl font-extrabold mb-0.5">△</span>
+      <span class="block text-[11px] font-semibold text-zinc-400">重い・要調整</span>
+    </button>
+  </div>
+</section>
+
+<!-- ④ Optional One-line Memo -->
+<section class="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-4 space-y-3">
+  <div class="flex items-center justify-between">
+    <h2 class="text-xs font-bold uppercase tracking-wider text-zinc-300 flex items-center gap-1.5">
+      <span class="text-amber-400">④</span> 一言メモ（任意）
+    </h2>
+    <button type="button" id="btn-clear-memo" class="text-[11px] text-zinc-500 hover:text-zinc-300">クリア</button>
+  </div>
+
+  <!-- Quick Tag Pills -->
+  <div class="flex flex-wrap gap-1.5">
+    <button type="button" data-tag="動画撮影済" class="memo-tag text-[11px] px-2.5 py-1 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700/70 active:scale-95 transition">+ 動画撮影済</button>
+    <button type="button" data-tag="粒立ちOK" class="memo-tag text-[11px] px-2.5 py-1 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700/70 active:scale-95 transition">+ 粒立ちOK</button>
+    <button type="button" data-tag="左足意識" class="memo-tag text-[11px] px-2.5 py-1 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700/70 active:scale-95 transition">+ 左足意識</button>
+    <button type="button" data-tag="疲労あり" class="memo-tag text-[11px] px-2.5 py-1 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700/70 active:scale-95 transition">+ 疲労あり</button>
+  </div>
+
+  <textarea id="memo-input" rows="2" placeholder="フォームの感触、動画で気づいた点、次回の課題など..." class="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-amber-500 transition resize-none"></textarea>
+</section>
+
+<!-- Primary Save & Gemini Export Actions -->
+<section class="space-y-2.5 pt-1">
+  <button type="button" id="btn-save" class="w-full py-4 rounded-2xl bg-amber-500 hover:bg-amber-400 active:scale-[0.98] text-zinc-950 font-extrabold text-base tracking-wide shadow-lg gold-glow transition flex items-center justify-center gap-2">
+    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+    </svg>
+    <span id="save-btn-text">この日の記録を保存</span>
+  </button>
+
+  <button type="button" id="btn-copy-weekly" class="w-full py-3.5 rounded-2xl bg-zinc-900 hover:bg-zinc-800 active:scale-[0.98] text-amber-400 font-bold text-sm border border-amber-500/40 transition flex items-center justify-center gap-2">
+    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+    </svg>
+    <span>直近7日分をコピー（Gemini分析用）</span>
+  </button>
+</section>
+
+<!-- Past Logs / Review & Edit History -->
+<section class="pt-4 border-t border-zinc-800/80 space-y-3">
+  <div class="flex items-center justify-between">
+    <h2 class="text-xs font-bold uppercase tracking-wider text-zinc-400">過去の練習履歴（タップで振り返り・修正）</h2>
+    <span class="text-[11px] text-zinc-500">最新順</span>
+  </div>
+
+  <div id="history-list" class="space-y-2.5">
+    <!-- Populated by JS -->
+  </div>
+</section>
+  </div>
+
+  <script>
+    (function () {
+      const STORAGE_KEY = 'drum_habit_log_v1';
+
+      // Day of Week Routine Configuration
+      const DAY_CONFIG = {
+        0: { label: '日', title: '土日おさらい・統合セッション', desc: '45〜60分 / ブラシ質感・足ダブル・Ritualタム移動の統合' },
+        1: { label: '月', title: 'Rudimental Ritual 集中【前半】', desc: '60 BPM (2・4拍取り) / Phase 1＆2 粒立ち・安定感' },
+        2: { label: '火', title: 'メタリカ『One』＆ ヒール＆トゥ強化', desc: 'RF RF LF LF RF RF + スネア / 1モーション2打の分離' },
+        3: { label: '水', title: '実戦音源トレーニング【分析・部分攻略】', desc: '0.8倍速音源等でブラシのスウィープ・コンピング部分攻略' },
+        4: { label: '木', title: 'Rudimental Ritual 集中【後半】', desc: '60 BPM (2・4拍取り) / Phase 3＆4 ロール・アクセント・持久力' },
+        5: { label: '金', title: '実戦音源トレーニング【本番モード・通し】', desc: '原曲テンポマイナスワン（Autumn Leaves等）1曲通し' },
+        6: { label: '土', title: '土日おさらい・統合セッション', desc: '45〜60分 / ブラシ質感・足ダブル・Ritualタム移動の統合' }
+      };
+
+      // State
+      let logs = loadLogs();
+      let selectedRating = '◯';
+
+      // DOM Elements
+      const datePicker = document.getElementById('date-picker');
+      const btnToday = document.getElementById('btn-today');
+      const btnYesterday = document.getElementById('btn-yesterday');
+      const dayBadge = document.getElementById('day-badge');
+      const dailyThemeTitle = document.getElementById('daily-theme-title');
+      const dailyThemeDesc = document.getElementById('daily-theme-desc');
+      const checklistChallengeSub = document.getElementById('checklist-challenge-sub');
+      const entryStatusBadge = document.getElementById('entry-status-badge');
+
+      const taskCheckboxes = document.querySelectorAll('.task-checkbox');
+      const btnCheckAll = document.getElementById('btn-check-all');
+
+      const bpmRitual = document.getElementById('bpm-ritual');
+      const bpmHeeltoe = document.getElementById('bpm-heeltoe');
+      const bpmBrush = document.getElementById('bpm-brush');
+      const hintRitual = document.getElementById('hint-ritual');
+      const hintHeeltoe = document.getElementById('hint-heeltoe');
+      const hintBrush = document.getElementById('hint-brush');
+
+      const ratingBtns = document.querySelectorAll('.rating-btn');
+      const memoInput = document.getElementById('memo-input');
+      const btnClearMemo = document.getElementById('btn-clear-memo');
+      const memoTags = document.querySelectorAll('.memo-tag');
+
+      const btnSave = document.getElementById('btn-save');
+      const saveBtnText = document.getElementById('save-btn-text');
+      const btnCopyWeekly = document.getElementById('btn-copy-weekly');
+      const historyList = document.getElementById('history-list');
+      const totalCount = document.getElementById('total-count');
+
+      // Utility: Format Date to YYYY-MM-DD in local time
+      function formatDateLocal(dateObj) {
+        const y = dateObj.getFullYear();
+        const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const d = String(dateObj.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+      }
+
+      // Utility: Parse YYYY-MM-DD safely
+      function parseDateLocal(dateStr) {
+        const [y, m, d] = dateStr.split('-').map(Number);
+        return new Date(y, m - 1, d);
+      }
+
+      // Load from localStorage
+      function loadLogs() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          return raw ? JSON.parse(raw) : {};
+        } catch (e) {
+          console.error('Failed to load logs', e);
+          return {};
+        }
+      }
+
+      // Save to localStorage
+      function persistLogs() {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(logs));
+        } catch (e) {
+          showToast('保存エラーが発生しました');
+        }
+      }
+
+      // Show Toast
+      let toastTimer = null;
+      function showToast(msg) {
+        const toast = document.getElementById('toast');
+        const toastMsg = document.getElementById('toast-message');
+        toastMsg.textContent = msg;
+        toast.classList.remove('opacity-0', '-translate-y-3');
+        toast.classList.add('opacity-100', 'translate-y-0');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+          toast.classList.remove('opacity-100', 'translate-y-0');
+          toast.classList.add('opacity-0', '-translate-y-3');
+        }, 2400);
+      }
+
+      // Find latest recorded BPMs prior to current date for helpful hints
+      function updateHints(currentDateStr) {
+        const sortedDates = Object.keys(logs).filter(d => d < currentDateStr).sort().reverse();
+        let lastRitual = null;
+        let lastHeeltoe = null;
+        let lastBrush = null;
+
+        for (const d of sortedDates) {
+          const item = logs[d];
+          if (lastRitual = null && item.bpmRitual) lastRitual = `${item.bpmRitual} BPM (${d.slice(5)})`;
+          if (lastHeeltoe = null && item.bpmHeeltoe) lastHeeltoe = `${item.bpmHeeltoe} BPM (${d.slice(5)})`;
+          if (lastBrush = null && item.bpmBrush) lastBrush = `${item.bpmBrush} BPM (${d.slice(5)})`;
+          if (lastRitual && lastHeeltoe && lastBrush) break;
+        }
+
+        hintRitual.textContent = lastRitual ? `前回記録: ${lastRitual}` : '前回記録: なし';
+        hintHeeltoe.textContent = lastHeeltoe ? `前回: ${lastHeeltoe} | RF RF LF LF RF RF + Snare` : 'RF RF LF LF RF RF + Snare';
+        hintBrush.textContent = lastBrush ? `前回記録: ${lastBrush}` : '0.8倍速換算や原曲テンポなど（任意）';
+      }
+
+      // Update Rating Button UI
+      function setRatingUI(val) {
+        selectedRating = val;
+        ratingBtns.forEach(btn => {
+          const isSelected = btn.dataset.rating = val;
+          if (isSelected) {
+            btn.classList.remove('bg-zinc-950', 'border-zinc-800', 'text-zinc-300');
+            btn.classList.add('bg-amber-500/15', 'border-amber-500', 'text-amber-400');
+            btn.querySelector('span:last-child').classList.replace('text-zinc-400', 'text-amber-300');
+          } else {
+            btn.classList.add('bg-zinc-950', 'border-zinc-800', 'text-zinc-300');
+            btn.classList.remove('bg-amber-500/15', 'border-amber-500', 'text-amber-400');
+            btn.querySelector('span:last-child').classList.replace('text-amber-300', 'text-zinc-400');
+          }
+        });
+      }
+
+      // Load specific date into form
+      function loadDateIntoForm(dateStr) {
+        datePicker.value = dateStr;
+        const dateObj = parseDateLocal(dateStr);
+        const dow = dateObj.getDay();
+        const cfg = DAY_CONFIG[dow];
+
+        // Update Day Banner
+        dayBadge.textContent = cfg.label;
+        dailyThemeTitle.textContent = cfg.title;
+        dailyThemeDesc.textContent = cfg.desc;
+        checklistChallengeSub.textContent = cfg.title;
+
+        updateHints(dateStr);
+
+        const existing = logs[dateStr];
+        if (existing) {
+          entryStatusBadge.textContent = '記録済み（編集モード）';
+          entryStatusBadge.className = 'text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 font-semibold';
+          saveBtnText.textContent = 'この日の記録を更新する';
+
+          taskCheckboxes.forEach(cb => {
+            cb.checked = !!(existing.tasks && existing.tasks[cb.dataset.task]);
+          });
+
+          bpmRitual.value = existing.bpmRitual || '';
+          bpmHeeltoe.value = existing.bpmHeeltoe || '';
+          bpmBrush.value = existing.bpmBrush || '';
+          setRatingUI(existing.rating || '◯');
+          memoInput.value = existing.memo || '';
+        } else {
+          entryStatusBadge.textContent = '新規入力';
+          entryStatusBadge.className = 'text-[10px] px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400 font-medium';
+          saveBtnText.textContent = 'この日の記録を保存';
+
+          taskCheckboxes.forEach(cb => cb.checked = false);
+          bpmRitual.value = '';
+          bpmHeeltoe.value = '';
+          bpmBrush.value = '';
+          setRatingUI('◯');
+          memoInput.value = '';
+        }
+      }
+
+      // Render History List
+      function renderHistory() {
+        const dates = Object.keys(logs).sort().reverse();
+        totalCount.textContent = `${dates.length} 日`;
+
+        if (dates.length = 0) {
+          historyList.innerHTML = `
+            <div class="bg-zinc-900/50 border border-zinc-800/80 rounded-2xl p-6 text-center text-xs text-zinc-500">
+              まだ記録がありません。上のフォームから最初の練習を記録しましょう！
+            </div>
+          `;
+          return;
+        }
+
+        historyList.innerHTML = dates.slice(0, 21).map(dateStr => {
+          const item = logs[dateStr];
+          const dateObj = parseDateLocal(dateStr);
+          const dow = DAY_CONFIG[dateObj.getDay()].label;
+          const tasks = item.tasks || {};
+          const doneCount = ['basics', 'ritual', 'brush', 'challenge'].filter(k => tasks[k]).length;
+
+          const ritualTag = item.bpmRitual ? `<span class="px-2 py-0.5 rounded bg-zinc-800 text-zinc-200 font-mono text-[11px]">Ritual: <strong class="text-amber-400">${item.bpmRitual}</strong></span>` : '';
+          const heelTag = item.bpmHeeltoe ? `<span class="px-2 py-0.5 rounded bg-zinc-800 text-zinc-200 font-mono text-[11px]">One/HT: <strong class="text-amber-400">${item.bpmHeeltoe}</strong></span>` : '';
+          const brushTag = item.bpmBrush ? `<span class="px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 font-mono text-[11px]">Brush: ${item.bpmBrush}</span>` : '';
+          const memoHtml = item.memo ? `<p class="text-xs text-zinc-400 mt-2 line-clamp-2 border-l-2 border-zinc-700 pl-2">${escapeHtml(item.memo)}</p>` : '';
+
+          const isCurrent = datePicker.value = dateStr;
+          const borderClass = isCurrent ? 'border-amber-500/60 bg-zinc-900' : 'border-zinc-800/90 bg-zinc-900/60 hover:bg-zinc-900';
+
+          return `
+            <div data-date="${dateStr}" class="history-card ${borderClass} border rounded-2xl p-3.5 cursor-pointer transition active:scale-[0.99]">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span class="text-sm font-extrabold text-zinc-100 font-mono">${dateStr}</span>
+                  <span class="text-xs font-bold px-1.5 py-0.5 rounded bg-zinc-800 text-amber-400">${dow}</span>
+                  <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full ${doneCount = 4 ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-zinc-800 text-zinc-400'}">
+                    ${doneCount}/4 完了
+                  </span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="text-base font-extrabold text-amber-400">${item.rating || '◯'}</span>
+                  <span class="text-[11px] text-zinc-500">編集 ›</span>
+                </div>
+              </div>
+              ${(ritualTag || heelTag || brushTag) ? `<div class="flex flex-wrap gap-1.5 mt-2">${ritualTag}${heelTag}${brushTag}</div>` : ''}
+              ${memoHtml}
+            </div>
+          `;
+        }).join('');
+
+        // Attach click listeners to history cards
+        document.querySelectorAll('.history-card').forEach(card => {
+          card.addEventListener('click', () => {
+            const targetDate = card.dataset.date;
+            loadDateIntoForm(targetDate);
+            renderHistory();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            showToast(`${targetDate} の記録を読み込みました`);
+          });
+        });
+      }
+
+      function escapeHtml(str) {
+        return str.replace(/[&<>"']/g, m => ({
+          '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[m]));
+      }
+
+      // Event Listeners: Date Navigation
+      datePicker.addEventListener('change', (e) => {
+        if (e.target.value) {
+          loadDateIntoForm(e.target.value);
+          renderHistory();
+        }
+      });
+
+      btnToday.addEventListener('click', () => {
+        const todayStr = formatDateLocal(new Date());
+        loadDateIntoForm(todayStr);
+        renderHistory();
+      });
+
+      btnYesterday.addEventListener('click', () => {
+        const d = new Date();
+        d.setDate(d.getDate() - 1);
+        const yestStr = formatDateLocal(d);
+        loadDateIntoForm(yestStr);
+        renderHistory();
+        showToast('昨日の日付に切り替えました');
+      });
+
+      // Check All Button
+      btnCheckAll.addEventListener('click', () => {
+        const allChecked = Array.from(taskCheckboxes).every(cb => cb.checked);
+        taskCheckboxes.forEach(cb => cb.checked = !allChecked);
+      });
+
+      // BPM Stepper Buttons
+      document.querySelectorAll('.bpm-step').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const input = document.getElementById(btn.dataset.target);
+          const step = parseInt(btn.dataset.step, 10);
+          let current = parseInt(input.value, 10);
+          if (isNaN(current)) {
+            // If empty, try to grab from hint or start at sensible default
+            current = btn.dataset.target = 'bpm-heeltoe' ? 60 : 80;
+          } else {
+            current = Math.max(1, current + step);
+          }
+          input.value = current;
+        });
+      });
+
+      // Rating Buttons
+      ratingBtns.forEach(btn => {
+        btn.addEventListener('click', () => setRatingUI(btn.dataset.rating));
+      });
+
+      // Memo Quick Tags
+      memoTags.forEach(tagBtn => {
+        tagBtn.addEventListener('click', () => {
+          const tagText = `[${tagBtn.dataset.tag}]`;
+          const cur = memoInput.value.trim();
+          if (!cur.includes(tagText)) {
+            memoInput.value = cur ? `${cur} ${tagText}` : tagText;
+          }
+        });
+      });
+
+      btnClearMemo.addEventListener('click', () => {
+        memoInput.value = '';
+      });
+
+      // Save Entry
+      btnSave.addEventListener('click', () => {
+        const dateStr = datePicker.value;
+        if (!dateStr) return;
+
+        const tasks = {};
+        taskCheckboxes.forEach(cb => {
+          tasks[cb.dataset.task] = cb.checked;
+        });
+
+        logs[dateStr] = {
+          date: dateStr,
+          tasks,
+          bpmRitual: bpmRitual.value ? Number(bpmRitual.value) : null,
+          bpmHeeltoe: bpmHeeltoe.value ? Number(bpmHeeltoe.value) : null,
+          bpmBrush: bpmBrush.value ? Number(bpmBrush.value) : null,
+          rating: selectedRating,
+          memo: memoInput.value.trim(),
+          updatedAt: new Date().toISOString()
+        };
+
+        persistLogs();
+        loadDateIntoForm(dateStr);
+        renderHistory();
+        showToast(`${dateStr} の練習記録を保存しました`);
+      });
+
+      // Copy Last 7 Days for Gemini Analysis
+      btnCopyWeekly.addEventListener('click', () => {
+        const allDates = Object.keys(logs).sort().reverse();
+        if (allDates.length === 0) {
+          showToast('コピーする練習データがまだありません');
+          return;
+        }
+
+        // Take up to 7 most recent logged days (or 7 days ending at selected date)
+        const targetDates = allDates.slice(0, 7).reverse();
+
+        let lines = [
+          '【ドラム練習ログ（直近7回分）】',
+          '以下の練習データをもとに、①BPMの推移と成長傾向、②曜日別課題の進捗バランス、③次週の練習メニュー・テンポ設定の調整案を分析してください。',
+          ''
+        ];
+
+        targetDates.forEach(dStr => {
+          const item = logs[dStr];
+          const dow = DAY_CONFIG[parseDateLocal(dStr).getDay()];
+          const t = item.tasks || {};
+          const doneList = [
+            t.basics ? '基礎' : null,
+            t.ritual ? 'Ritual' : null,
+            t.brush ? 'ブラシ' : null,
+            t.challenge ? '日替わり' : null
+          ].filter(Boolean);
+
+          const bpmParts = [];
+          if (item.bpmRitual) bpmParts.push(`Ritual: ${item.bpmRitual}BPM`);
+          if (item.bpmHeeltoe) bpmParts.push(`ヒール&トゥ(One): ${item.bpmHeeltoe}BPM`);
+          if (item.bpmBrush) bpmParts.push(`ブラシ/曲: ${item.bpmBrush}BPM`);
+
+          lines.push(`■ ${dStr} (${dow.label})｜手応え: ${item.rating || '◯'}｜完了(${doneList.length}/4): ${doneList.join('・') || 'なし'}`);
+          lines.push(`  ・テーマ: ${dow.title}`);
+          if (bpmParts.length > 0) {
+            lines.push(`  ・達成BPM: ${bpmParts.join(' / ')}`);
+          }
+          if (item.memo) {
+            lines.push(`  ・メモ: ${item.memo}`);
+          }
+        });
+
+        const exportText = lines.join('\n');
+
+        // Clipboard Copy with Safari Fallback
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(exportText).then(() => {
+            showToast(`直近${targetDates.length}日分のデータをコピーしました！`);
+          }).catch(() => {
+            fallbackCopy(exportText, targetDates.length);
+          });
+        } else {
+          fallbackCopy(exportText, targetDates.length);
+        }
+      });
+
+      function fallbackCopy(text, count) {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        try {
+          document.execCommand('copy');
+          showToast(`直近${count}日分のデータをコピーしました！`);
+        } catch (err) {
+          showToast('コピーに失敗しました');
+        }
+        document.body.removeChild(ta);
+      }
+
+      // Initialize App
+      // Note: If user opens between 00:00 and 03:59, default to today's calendar date,
+      // with the prominent "昨日" button right beside it for midnight post-practice logging.
+      const initialDate = formatDateLocal(new Date());
+      loadDateIntoForm(initialDate);
+      renderHistory();
+    })();
+  </script>
+
+</body>
+</html>
+
